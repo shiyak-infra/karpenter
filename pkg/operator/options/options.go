@@ -76,6 +76,7 @@ type Options struct {
 	FeatureGates            FeatureGates
 	NodeClaimReconcileQps   int
 	NodeClaimReconcileBurst int
+	RegistrationTTL         time.Duration
 }
 
 type FlagSet struct {
@@ -115,6 +116,7 @@ func (o *Options) AddFlags(fs *FlagSet) {
 	fs.StringVar(&o.FeatureGates.inputStr, "feature-gates", env.WithDefaultString("FEATURE_GATES", "NodeRepair=false,ReservedCapacity=false,SpotToSpotConsolidation=false"), "Optional features can be enabled / disabled using feature gates. Current options are: NodeRepair, ReservedCapacity, and SpotToSpotConsolidation")
 	fs.IntVar(&o.NodeClaimReconcileQps, "node-claim-reconcile-qps", env.WithDefaultInt("NODECLAIM_RECONCILE_QPS", 10), "The qps reconcile of nodeclaim controllers")
 	fs.IntVar(&o.NodeClaimReconcileBurst, "node-claim-reconcile-burst", env.WithDefaultInt("NODECLAIM_RECONCILE_BURST", 100), "The burst reconcile of nodeclaim controllers")
+	fs.DurationVar(&o.RegistrationTTL, "registration-ttl", env.WithDefaultDuration("REGISTRATION_TTL", 15*time.Minute), "The registration ttl for nodeclaim controllers, if we don't see the node within this time, then we should delete the NodeClaim and try again")
 }
 
 func (o *Options) Parse(fs *FlagSet, args ...string) error {

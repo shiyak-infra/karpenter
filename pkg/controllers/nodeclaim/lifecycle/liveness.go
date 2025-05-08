@@ -18,7 +18,6 @@ package lifecycle
 
 import (
 	"context"
-	"time"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 
@@ -32,16 +31,13 @@ import (
 
 	v1 "sigs.k8s.io/karpenter/pkg/apis/v1"
 	"sigs.k8s.io/karpenter/pkg/metrics"
+	"sigs.k8s.io/karpenter/pkg/operator/options"
 )
 
 type Liveness struct {
 	clock      clock.Clock
 	kubeClient client.Client
 }
-
-// registrationTTL is a heuristic time that we expect the node to register within
-// If we don't see the node within this time, then we should delete the NodeClaim and try again
-const registrationTTL = time.Minute * 15
 
 func (l *Liveness) Reconcile(ctx context.Context, nodeClaim *v1.NodeClaim) (reconcile.Result, error) {
 	registered := nodeClaim.StatusConditions().Get(v1.ConditionTypeRegistered)
@@ -51,6 +47,7 @@ func (l *Liveness) Reconcile(ctx context.Context, nodeClaim *v1.NodeClaim) (reco
 	if registered == nil {
 		return reconcile.Result{Requeue: true}, nil
 	}
+	registrationTTL := options.FromContext(ctx).RegistrationTTL
 	// If the Registered statusCondition hasn't gone True during the TTL since we first updated it, we should terminate the NodeClaim
 	// NOTE: ttl has to be stored and checked in the same place since l.clock can advance after the check causing a race
 	if ttl := registrationTTL - l.clock.Since(registered.LastTransitionTime.Time); ttl > 0 {
