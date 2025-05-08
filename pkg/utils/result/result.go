@@ -17,7 +17,6 @@ limitations under the License.
 package result
 
 import (
-	"math"
 	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -25,16 +24,18 @@ import (
 
 // Min returns the result that wants to requeue the soonest
 func Min(results ...reconcile.Result) (result reconcile.Result) {
-	min := time.Duration(math.MaxInt64)
+	result = reconcile.Result{
+		Requeue:      true,
+		RequeueAfter: 5 * time.Minute,
+	}
 	for _, r := range results {
 		if r.IsZero() {
 			continue
 		}
-		if r.RequeueAfter < min {
-			min = r.RequeueAfter
-			result.RequeueAfter = min
-			result.Requeue = true
+		if r.RequeueAfter < result.RequeueAfter {
+			result.RequeueAfter = r.RequeueAfter
 		}
+
 	}
 	return
 }
