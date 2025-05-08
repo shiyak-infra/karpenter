@@ -95,4 +95,17 @@ var (
 			NodePoolLabel,
 		},
 	)
+	NodeClaimsConditionGauge = opmetrics.NewPrometheusGauge(
+		crmetrics.Registry,
+		prometheus.GaugeOpts{
+			Namespace: Namespace,
+			Subsystem: NodePoolSubsystem,
+			Name:      "nodeclaims_condition",
+			Help:      "Number of nodeclaims condition. Labeled by owning nodepool",
+		},
+		[]string{
+			ConditionLabel,
+			NodePoolLabel,
+		},
+	)
 )

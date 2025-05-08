@@ -29,6 +29,7 @@ const (
 	NodePoolLabel     = "nodepool"
 	ReasonLabel       = "reason"
 	CapacityTypeLabel = "capacity_type"
+	ConditionLabel    = "condition"
 
 	// Reasons for CREATE/DELETE shared metrics
 	ProvisionedReason = "provisioned"
