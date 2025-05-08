@@ -1,12 +1,25 @@
 # This is the format of an AWS ECR Public Repo as an example.
-export KWOK_REPO ?= ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com
+# export KWOK_REPO ?= ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com
+export KWOK_REPO ?= 590183687488.dkr.ecr.us-west-2.amazonaws.com/karpenter
+export KWOK_TAG ?= $(shell git describe --tags --always --dirty)
 export KARPENTER_NAMESPACE=kube-system
 
+## Inject the app version into operator.Version
+LDFLAGS ?= -ldflags=-X=sigs.k8s.io/karpenter/pkg/operator.Version=$(shell git describe --tags --always | cut -d"v" -f2)
+
+GOFLAGS ?= $(LDFLAGS)
+WITH_GOFLAGS = GOFLAGS="$(GOFLAGS)"
+
+## Extra helm options
 HELM_OPTS ?= --set logLevel=debug \
 			--set controller.resources.requests.cpu=1 \
 			--set controller.resources.requests.memory=1Gi \
 			--set controller.resources.limits.cpu=1 \
 			--set controller.resources.limits.memory=1Gi
+
+# Filename when building the binary controller only
+GOARCH ?= $(shell go env GOARCH)
+BINARY_FILENAME = karpenter-provider-kwok-$(GOARCH)
 
 help: ## Display help
 	@awk 'BEGIN {FS = ":.*##"; printf "Usage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
@@ -25,10 +38,14 @@ build-with-kind: # build with kind assumes the image will be uploaded directly o
 	$(eval IMG_TAG=latest)
 
 build: ## Build the Karpenter KWOK controller images using ko build
-	$(eval CONTROLLER_IMG=$(shell $(WITH_GOFLAGS) KO_DOCKER_REPO="$(KWOK_REPO)" ko build -B sigs.k8s.io/karpenter/kwok))
+	$(eval CONTROLLER_IMG=$(shell $(WITH_GOFLAGS) KO_DOCKER_REPO="$(KWOK_REPO)" ko build --tags $(KWOK_TAG) -B sigs.k8s.io/karpenter/kwok))
 	$(eval IMG_REPOSITORY=$(shell echo $(CONTROLLER_IMG) | cut -d "@" -f 1 | cut -d ":" -f 1))
 	$(eval IMG_TAG=$(shell echo $(CONTROLLER_IMG) | cut -d "@" -f 1 | cut -d ":" -f 2 -s))
 	$(eval IMG_DIGEST=$(shell echo $(CONTROLLER_IMG) | cut -d "@" -f 2))
+
+binary: ## Build the Karpenter controller binary using go build
+	go mod tidy
+	go build $(GOFLAGS) -o $(BINARY_FILENAME) ./kwok/main.go
 
 apply-with-kind: verify build-with-kind ## Deploy the kwok controller from the current state of your git repository into your ~/.kube/config cluster
 	kubectl apply -f kwok/charts/crds
