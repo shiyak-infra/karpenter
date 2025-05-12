@@ -29,6 +29,7 @@ import (
 
 	v1 "sigs.k8s.io/karpenter/pkg/apis/v1"
 	"sigs.k8s.io/karpenter/pkg/cloudprovider"
+	"sigs.k8s.io/karpenter/pkg/operator/options"
 	"sigs.k8s.io/karpenter/pkg/scheduling"
 )
 
@@ -47,7 +48,15 @@ func (d *Drift) Reconcile(ctx context.Context, nodePool *v1.NodePool, nodeClaim 
 	hasDriftedCondition := nodeClaim.StatusConditions().Get(v1.ConditionTypeDrifted) != nil
 
 	// From here there are three scenarios to handle:
-	// 1. If NodeClaim is not launched, remove the drift status condition
+	// 1. If drift is not enabled but the NodeClaim is drifted, remove the status condition
+	if !options.FromContext(ctx).FeatureGates.Drift {
+		_ = nodeClaim.StatusConditions().Clear(v1.ConditionTypeDrifted)
+		if hasDriftedCondition {
+			log.FromContext(ctx).V(1).Info("removing drift status condition, drift has been disabled")
+		}
+		return reconcile.Result{}, nil
+	}
+	// 2. If NodeClaim is not launched, remove the drift status condition
 	if !nodeClaim.StatusConditions().Get(v1.ConditionTypeLaunched).IsTrue() {
 		_ = nodeClaim.StatusConditions().Clear(v1.ConditionTypeDrifted)
 		if hasDriftedCondition {
@@ -59,7 +68,7 @@ func (d *Drift) Reconcile(ctx context.Context, nodePool *v1.NodePool, nodeClaim 
 	if err != nil {
 		return reconcile.Result{}, cloudprovider.IgnoreNodeClaimNotFoundError(fmt.Errorf("getting drift, %w", err))
 	}
-	// 2. Otherwise, if the NodeClaim isn't drifted, but has the status condition, remove it.
+	// 3. Otherwise, if the NodeClaim isn't drifted, but has the status condition, remove it.
 	if driftedReason == "" {
 		if hasDriftedCondition {
 			_ = nodeClaim.StatusConditions().Clear(v1.ConditionTypeDrifted)
@@ -67,7 +76,7 @@ func (d *Drift) Reconcile(ctx context.Context, nodePool *v1.NodePool, nodeClaim 
 		}
 		return reconcile.Result{RequeueAfter: 5 * time.Minute}, nil
 	}
-	// 3. Finally, if the NodeClaim is drifted, but doesn't have status condition, add it.
+	// 4. Finally, if the NodeClaim is drifted, but doesn't have status condition, add it.
 	nodeClaim.StatusConditions().SetTrueWithReason(v1.ConditionTypeDrifted, string(driftedReason), string(driftedReason))
 	if !hasDriftedCondition {
 		log.FromContext(ctx).V(1).WithValues("reason", string(driftedReason)).Info("marking drifted")

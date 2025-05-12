@@ -23,14 +23,14 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"sigs.k8s.io/karpenter/pkg/utils/pretty"
-
 	v1 "sigs.k8s.io/karpenter/pkg/apis/v1"
 	disruptionevents "sigs.k8s.io/karpenter/pkg/controllers/disruption/events"
 	"sigs.k8s.io/karpenter/pkg/controllers/provisioning"
 	"sigs.k8s.io/karpenter/pkg/controllers/provisioning/scheduling"
 	"sigs.k8s.io/karpenter/pkg/controllers/state"
 	"sigs.k8s.io/karpenter/pkg/events"
+	"sigs.k8s.io/karpenter/pkg/operator/options"
+	"sigs.k8s.io/karpenter/pkg/utils/pretty"
 )
 
 // Drift is a subreconciler that deletes drifted candidates.
@@ -52,7 +52,8 @@ func NewDrift(kubeClient client.Client, cluster *state.Cluster, provisioner *pro
 
 // ShouldDisrupt is a predicate used to filter candidates
 func (d *Drift) ShouldDisrupt(ctx context.Context, c *Candidate) bool {
-	return c.NodeClaim.StatusConditions().Get(string(d.Reason())).IsTrue()
+	return options.FromContext(ctx).FeatureGates.Drift &&
+		c.NodeClaim.StatusConditions().Get(string(d.Reason())).IsTrue()
 }
 
 // ComputeCommand generates a disruption command given candidates

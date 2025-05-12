@@ -48,6 +48,7 @@ type OptionsFields struct {
 }
 
 type FeatureGates struct {
+	Drift                   *bool
 	NodeRepair              *bool
 	ReservedCapacity        *bool
 	SpotToSpotConsolidation *bool
@@ -77,6 +78,7 @@ func Options(overrides ...OptionsFields) *options.Options {
 		BatchIdleDuration:     lo.FromPtrOr(opts.BatchIdleDuration, time.Second),
 		PreferencePolicy:      lo.FromPtrOr(opts.PreferencePolicy, options.PreferencePolicyRespect),
 		FeatureGates: options.FeatureGates{
+			Drift:                   lo.FromPtrOr(opts.FeatureGates.Drift, true), // 默认为true, 否则无法通过单测
 			NodeRepair:              lo.FromPtrOr(opts.FeatureGates.NodeRepair, false),
 			ReservedCapacity:        lo.FromPtrOr(opts.FeatureGates.ReservedCapacity, false),
 			SpotToSpotConsolidation: lo.FromPtrOr(opts.FeatureGates.SpotToSpotConsolidation, false),

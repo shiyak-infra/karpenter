@@ -49,6 +49,7 @@ type optionsKey struct{}
 type FeatureGates struct {
 	inputStr string
 
+	Drift                   bool
 	NodeRepair              bool
 	ReservedCapacity        bool
 	SpotToSpotConsolidation bool
@@ -153,6 +154,11 @@ func ParseFeatureGates(gateStr string) (FeatureGates, error) {
 	// simple merging with environment vars.
 	if err := cliflag.NewMapStringBool(&gateMap).Set(gateStr); err != nil {
 		return gates, err
+	}
+	if val, ok := gateMap["Drift"]; ok {
+		gates.Drift = val
+	} else {
+		gates.Drift = true // Drift默认为true
 	}
 	if val, ok := gateMap["NodeRepair"]; ok {
 		gates.NodeRepair = val
