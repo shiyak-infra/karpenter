@@ -62,8 +62,7 @@ func (c *Controller) Reconcile(ctx context.Context) (reconcile.Result, error) {
 			nodePoolMap[nodePoolName]["terminated"] += 1
 			continue
 		}
-		if nodeClaim.StatusConditions().Get(v1.ConditionTypeConsolidatable).IsTrue() ||
-			nodeClaim.StatusConditions().Get(v1.ConditionTypeDrifted).IsTrue() ||
+		if nodeClaim.StatusConditions().Get(v1.ConditionTypeDrifted).IsTrue() ||
 			nodeClaim.StatusConditions().Get(v1.ConditionTypeDisruptionReason).IsTrue() {
 			nodePoolMap[nodePoolName]["disrupted"] += 1
 			continue
